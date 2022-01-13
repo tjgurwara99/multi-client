@@ -6,6 +6,7 @@
 docker-compose up -d
 ```
 `-d` would run a daemon process.
+
 3. This is the most annoying part unfortunately - you will have to modify your local `/etc/hosts` file to test this locally
 
 I had to add the following to my `/etc/hosts`
