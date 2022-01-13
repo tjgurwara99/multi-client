@@ -1,0 +1,86 @@
+version: "3.7"
+
+services:
+  nginx-proxy:
+    image: jwilder/nginx-proxy
+    container_name: nginx-proxy
+    ports:
+      - "80:80"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ./nginx.conf:/etc/nginx/nginx.conf # replace the default nginx.conf from the image with our nginx.conf
+    depends_on:
+      - client1_app
+      - client2_app
+
+  client1_db:
+    image: postgres
+    volumes:
+      - ./pg_hba.conf:/usr/local/var/postgres/pg_hba.conf
+    environment:
+      - POSTGRES_USER=client1
+      - POSTGRES_DB=client1
+      - POSTGRES_PASSWORD=password
+  client1_migration:
+    image: taj/multi-client
+    command: ./wait-for-it.sh client1_db:5432 -- python manage.py migrate
+    volumes:
+      - .:/main
+      - ./pg_hba.conf:/usr/local/var/postgres/pg_hba.conf
+    depends_on:
+      - client1_db
+    environment:
+      - DATABASE_USER=client1
+      - DATABASE_NAME=client1
+      - DATABASE_PASSWORD=password
+      - DATABASE_HOST=client1_db
+  client1_app:
+    restart: always
+    image: taj/multi-client # this is why we ran the docker build command
+    command: ./wait-for-it.sh client1_db:5432 -- python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/main
+      - ./pg_hba.conf:/usr/local/var/postgres/pg_hba.conf
+    depends_on:
+      - client1_db
+    environment:
+      - DATABASE_USER=client1
+      - DATABASE_NAME=client1
+      - DATABASE_PASSWORD=password
+      - DATABASE_HOST=client1_db
+
+  client2_db:
+    image: postgres
+    volumes:
+      - ./pg_hba.conf:/usr/local/var/postgres/pg_hba.conf
+    environment:
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_USER=client2
+      - POSTGRES_DB=client2
+  client2_migration:
+    image: taj/multi-client
+    command: ./wait-for-it.sh client2_db:5432 -- python manage.py migrate
+    volumes:
+      - .:/main
+      - ./pg_hba.conf:/usr/local/var/postgres/pg_hba.conf
+    depends_on:
+      - client2_db
+    environment:
+      - DATABASE_USER=client2
+      - DATABASE_NAME=client2
+      - DATABASE_PASSWORD=password
+      - DATABASE_HOST=client2_db
+  client2_app:
+    restart: always
+    image: taj/multi-client # this is why we ran the docker build command
+    command: ./wait-for-it.sh client2_db:5432 -- python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/main
+      - ./pg_hba.conf:/usr/local/var/postgres/pg_hba.conf
+    depends_on:
+      - client2_db
+    environment:
+      - DATABASE_USER=client2
+      - DATABASE_NAME=client2
+      - DATABASE_PASSWORD=password
+      - DATABASE_HOST=client2_db
